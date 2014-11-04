@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "bufio"
+	"bufio"
 	"fmt"
 )
 
@@ -18,7 +18,7 @@ func main() {
 	fmt.Println("b.Bytes()", b.Bytes())
 	fmt.Println("-----")
 
-	// for i := 0; i < 4; i++ {
+	// for i := 0; i < 5; i++ {
 	// 	buf = make([]byte, 7)
 	// 	count, _ := b.Read(buf)
 	// 	// buf, err := b.UnsafeRead(2)
@@ -29,10 +29,18 @@ func main() {
 	// 	fmt.Println()
 	// }
 
-	// scanner := bufio.NewScanner(b)
-	// for scanner.Scan() {
-	// 	fmt.Println(scanner.Bytes())
-	// }
+	scanner := bufio.NewScanner(b)
+	for scanner.Scan() {
+		fmt.Println(scanner.Bytes())
+	}
+}
+
+func properMod(x, y int64) int64 {
+	m := x % y
+	if m < 0 {
+		m += y
+	}
+	return m
 }
 
 // Buffer implements a circular buffer. It is a fixed size,
@@ -97,15 +105,12 @@ func (b *Buffer) nonCopyRead(n int64) []*byte {
 // Write writes up to len(buf) bytes to the internal ring,
 // overriding older data if necessary.
 func (b *Buffer) Write(buf []byte) (int, error) {
-	fmt.Printf("Start Write: %#v\n", b)
+	// fmt.Printf("Start Write: %#v\n", b)
 
 	n := int64(len(buf))
-	bytesWritten := int64(0)
 
-	for wc := b.writeCursor; bytesWritten < n && wc%b.size != (b.readCursor-1)%b.size; wc, bytesWritten = (wc+1)%b.size, bytesWritten+1 {
-		//
-		fmt.Printf("Checking that wc+1(%d) != b.readCursor(%d)\n", wc%b.size, (b.readCursor-1)%b.size)
-		fmt.Printf("Setting b.data[%d] = buf[%d]\n", wc%b.size, bytesWritten)
+	bytesWritten := int64(0)
+	for wc := b.writeCursor; bytesWritten < n && wc != properMod((b.readCursor-1), b.size); wc, bytesWritten = (wc+1)%b.size, bytesWritten+1 {
 		b.data[wc%b.size] = buf[bytesWritten]
 	}
 
@@ -113,7 +118,7 @@ func (b *Buffer) Write(buf []byte) (int, error) {
 	b.writeCount += bytesWritten
 	b.writeCursor = ((b.writeCursor + bytesWritten) % b.size)
 
-	fmt.Printf("End Write: %#v\n", b)
+	// fmt.Printf("End Write: %#v\n", b)
 	if bytesWritten != n {
 		return int(bytesWritten), fmt.Errorf("Unable to write all the bytes")
 	}
