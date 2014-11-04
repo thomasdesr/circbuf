@@ -1,4 +1,4 @@
-package circbuf
+package main
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 
 func TestBuffer_Impl(t *testing.T) {
 	var _ io.Writer = &Buffer{}
+	var _ io.Reader = &Buffer{}
 }
 
 func TestBuffer_ShortWrite(t *testing.T) {
@@ -31,6 +32,30 @@ func TestBuffer_ShortWrite(t *testing.T) {
 	}
 }
 
+func TestBuffer_ShortRead(t *testing.T) {
+	buf, err := NewBuffer(1024)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	inp := []byte("hello world")
+
+	n, err := buf.Write(inp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if n != len(inp) {
+		t.Fatalf("bad: %v", n)
+	}
+
+	out := make([]byte, len(inp)-2)
+	buf.Read(out)
+
+	if !bytes.Equal(out, inp[:len(inp)-2]) {
+		t.Fatalf("bad: %v", buf.Bytes())
+	}
+}
+
 func TestBuffer_FullWrite(t *testing.T) {
 	inp := []byte("hello world")
 
@@ -49,6 +74,30 @@ func TestBuffer_FullWrite(t *testing.T) {
 
 	if !bytes.Equal(buf.Bytes(), inp) {
 		t.Fatalf("bad: %v", buf.Bytes())
+	}
+}
+
+func TestBuffer_FullRead(t *testing.T) {
+	inp := []byte("hello world")
+
+	buf, err := NewBuffer(int64(len(inp)))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	n, err := buf.Write(inp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if n != len(inp) {
+		t.Fatalf("bad: %v", n)
+	}
+
+	out := make([]byte, len(inp))
+	buf.Read(out)
+
+	if !bytes.Equal(out, inp) {
+		t.Fatalf("bad: %v", out)
 	}
 }
 

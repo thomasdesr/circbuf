@@ -1,22 +1,56 @@
-package circbuf
+package main
 
 import (
+	// "bufio"
 	"fmt"
 )
+
+func main() {
+	b, _ := NewBuffer(100)
+
+	buf := make([]byte, b.Size()+10)
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(i % 20)
+	}
+	count, _ := b.Write(buf)
+
+	fmt.Println("buf", buf, count)
+	fmt.Println("b.Bytes()", b.Bytes())
+	fmt.Println("-----")
+
+	// for i := 0; i < 4; i++ {
+	// 	buf = make([]byte, 7)
+	// 	count, _ := b.Read(buf)
+	// 	// buf, err := b.UnsafeRead(2)
+
+	// 	fmt.Println("Read()", buf, count)
+	// 	fmt.Println("b.Bytes()", b.Bytes())
+	// 	fmt.Println()
+	// 	fmt.Println()
+	// }
+
+	// scanner := bufio.NewScanner(b)
+	// for scanner.Scan() {
+	// 	fmt.Println(scanner.Bytes())
+	// }
+}
 
 // Buffer implements a circular buffer. It is a fixed size,
 // and new writes overwrite older data, such that for a buffer
 // of size N, for any amount of writes, only the last N bytes
 // are retained.
 type Buffer struct {
-	data        []byte
-	size        int64
+	data []byte
+	size int64
+
 	writeCursor int64
-	written     int64
+	writeCount  int64
+	readCursor  int64
+	readCount   int64
 }
 
 // NewBuffer creates a new buffer of a given size. The size
-// must be greater than 0.
+// must be greater than 0
 func NewBuffer(size int64) (*Buffer, error) {
 	if size <= 0 {
 		return nil, fmt.Errorf("Size must be positive")
@@ -29,29 +63,61 @@ func NewBuffer(size int64) (*Buffer, error) {
 	return b, nil
 }
 
+func (b *Buffer) Read(p []byte) (int, error) {
+	bytes_read := 0
+	for i, pb := range b.nonCopyRead(int64(len(p))) {
+		if pb != nil {
+			p[i] = *pb
+			bytes_read++
+		}
+	}
+
+	return bytes_read, nil
+}
+
+func (b *Buffer) nonCopyRead(n int64) []*byte {
+	// fmt.Printf("Start Read: %#v\n", b)
+
+	buf := make([]*byte, n)
+	bytesRead := int64(0)
+
+	for r := b.readCursor; r-b.readCursor < n && b.readCount+(r-b.readCursor) < b.writeCount; r++ {
+		buf[r-b.readCursor] = &b.data[r%b.size]
+		bytesRead++
+	}
+
+	b.readCount += bytesRead
+	b.readCursor = (b.readCursor + n) % b.size
+
+	// fmt.Printf("End Read: %#v\n", b)
+
+	return buf
+}
+
 // Write writes up to len(buf) bytes to the internal ring,
 // overriding older data if necessary.
 func (b *Buffer) Write(buf []byte) (int, error) {
-	// Account for total bytes written
-	n := len(buf)
-	b.written += int64(n)
+	fmt.Printf("Start Write: %#v\n", b)
 
-	// If the buffer is larger than ours, then we only care
-	// about the last size bytes anyways
-	if int64(n) > b.size {
-		buf = buf[int64(n)-b.size:]
-	}
+	n := int64(len(buf))
+	bytesWritten := int64(0)
 
-	// Copy in place
-	remain := b.size - b.writeCursor
-	copy(b.data[b.writeCursor:], buf)
-	if int64(len(buf)) > remain {
-		copy(b.data, buf[remain:])
+	for wc := b.writeCursor; bytesWritten < n && wc%b.size != (b.readCursor-1)%b.size; wc, bytesWritten = (wc+1)%b.size, bytesWritten+1 {
+		//
+		fmt.Printf("Checking that wc+1(%d) != b.readCursor(%d)\n", wc%b.size, (b.readCursor-1)%b.size)
+		fmt.Printf("Setting b.data[%d] = buf[%d]\n", wc%b.size, bytesWritten)
+		b.data[wc%b.size] = buf[bytesWritten]
 	}
 
 	// Update location of the cursor
-	b.writeCursor = ((b.writeCursor + int64(len(buf))) % b.size)
-	return n, nil
+	b.writeCount += bytesWritten
+	b.writeCursor = ((b.writeCursor + bytesWritten) % b.size)
+
+	fmt.Printf("End Write: %#v\n", b)
+	if bytesWritten != n {
+		return int(bytesWritten), fmt.Errorf("Unable to write all the bytes")
+	}
+	return int(bytesWritten), nil
 }
 
 // Size returns the size of the buffer
@@ -61,16 +127,16 @@ func (b *Buffer) Size() int64 {
 
 // TotalWritten provides the total number of bytes written
 func (b *Buffer) TotalWritten() int64 {
-	return b.written
+	return b.writeCount
 }
 
 // Bytes provides a slice of the bytes written. This
 // slice should not be written to.
 func (b *Buffer) Bytes() []byte {
 	switch {
-	case b.written >= b.size && b.writeCursor == 0:
+	case b.writeCount >= b.size && b.writeCursor == 0:
 		return b.data
-	case b.written > b.size:
+	case b.writeCount > b.size:
 		out := make([]byte, b.size)
 		copy(out, b.data[b.writeCursor:])
 		copy(out[b.size-b.writeCursor:], b.data[:b.writeCursor])
