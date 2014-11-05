@@ -292,3 +292,45 @@ func TestBuffer_MultiPart(t *testing.T) {
 		t.Fatalf("bad: expected=\"%s\" got=\"%s\"", expect, buf.Bytes())
 	}
 }
+
+func TestProperMod(t *testing.T) {
+	q := 13
+
+	for n := -(q - 1); n < q; n++ {
+		one := n % q
+		two := (n + q) % q
+		three := ((n % q) + q) % q
+
+		if two != three {
+			t.Errorf("err: (Two != Three) Actual: %v; Expected: %v\n", three, two)
+		}
+
+		if n < 0 {
+			if one == two {
+				t.Errorf("err: (One == Two) Actual: %v; Expected: %v\n", two, one)
+			}
+			if one == three {
+				t.Errorf("err: (One == Three) Actual: %v; Expected: %v\n", three, one)
+			}
+		}
+	}
+}
+
+func BenchmarkProperModOne(b *testing.B) {
+	q := 13
+	for n := 0; n < b.N; n++ {
+		_ = n % q
+	}
+}
+func BenchmarkProperModTwo(b *testing.B) {
+	q := 13
+	for n := 0; n < b.N; n++ {
+		_ = (n + q) % q
+	}
+}
+func BenchmarkProperModThree(b *testing.B) {
+	q := 13
+	for n := 0; n < b.N; n++ {
+		_ = ((n % q) + q) % q
+	}
+}

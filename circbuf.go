@@ -5,11 +5,7 @@ import (
 )
 
 func properMod(x, y int64) int64 {
-	m := x % y
-	if m < 0 {
-		m += y
-	}
-	return m
+	return ((x % y) + y) % y
 }
 
 // Buffer implements a circular buffer. It is a fixed size, but
