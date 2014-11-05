@@ -8,9 +8,9 @@ import (
 func main() {
 	b, _ := NewBuffer(100)
 
-	buf := make([]byte, b.Size()+10)
+	buf := make([]byte, b.Size())
 	for i := 0; i < len(buf); i++ {
-		buf[i] = byte(i % 20)
+		buf[i] = byte(i)
 	}
 	count, _ := b.Write(buf)
 
@@ -58,14 +58,14 @@ type Buffer struct {
 }
 
 // NewBuffer creates a new buffer of a given size. The size
-// must be greater than 0
+// must be greater tha n 0
 func NewBuffer(size int64) (*Buffer, error) {
 	if size <= 0 {
 		return nil, fmt.Errorf("Size must be positive")
 	}
 
 	b := &Buffer{
-		size: size,
+		size: size + 1, // +1 to allow for non-overlapping reading & writing
 		data: make([]byte, size),
 	}
 	return b, nil
@@ -127,12 +127,16 @@ func (b *Buffer) Write(buf []byte) (int, error) {
 
 // Size returns the size of the buffer
 func (b *Buffer) Size() int64 {
-	return b.size
+	return b.size - 1
 }
 
 // TotalWritten provides the total number of bytes written
 func (b *Buffer) TotalWritten() int64 {
 	return b.writeCount
+}
+
+func (b *Buffer) TotalRead() int64 {
+	return b.readCount
 }
 
 // Bytes provides a slice of the bytes written. This

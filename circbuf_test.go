@@ -51,7 +51,8 @@ func TestBuffer_ShortRead(t *testing.T) {
 	out := make([]byte, len(inp)-2)
 	buf.Read(out)
 
-	if !bytes.Equal(out, inp[:len(inp)-2]) {
+	expected := []byte("hello wor")
+	if !bytes.Equal(out, expected) {
 		t.Fatalf("bad: %v", buf.Bytes())
 	}
 }
@@ -73,7 +74,7 @@ func TestBuffer_FullWrite(t *testing.T) {
 	}
 
 	if !bytes.Equal(buf.Bytes(), inp) {
-		t.Fatalf("bad: %v", buf.Bytes())
+		t.Fatalf("bad: input=\"%v\" output=\"%v\"", inp, buf.Bytes())
 	}
 }
 
@@ -110,16 +111,90 @@ func TestBuffer_LongWrite(t *testing.T) {
 	}
 
 	n, err := buf.Write(inp)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	if err == nil {
+		t.Fatalf("err: %v", buf)
 	}
-	if n != len(inp) {
+	if int64(n) > buf.Size() {
 		t.Fatalf("bad: %v", n)
 	}
 
-	expect := []byte(" world")
+	expect := []byte("hello ")
 	if !bytes.Equal(buf.Bytes(), expect) {
 		t.Fatalf("bad: %s", buf.Bytes())
+	}
+}
+
+func TestBuffer_LongRead(t *testing.T) {
+	inp := []byte("hello world")
+
+	buf, err := NewBuffer(6)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	n, err := buf.Write(inp)
+	if err == nil {
+		t.Fatalf("err: %v", buf)
+	}
+
+	out := make([]byte, len(inp))
+	buf.Read(out)
+
+	expect := []byte("hello ")
+	if !bytes.Equal(expect, out[:n]) {
+		t.Fatalf("bad: expected=\"%v\" got=\"%v\"", expect, out[:n])
+	}
+}
+
+// func TestSimpleRead(t *testing.T) {
+// 	buf, err := NewBuffer(16)
+
+// 	buf.Write([]byte("hello world"))
+
+// 	out := make([]byte, 6)
+// 	_, err := buf.Read(out)
+
+// 	if err != nil {
+
+// 	}
+// }
+
+func TestReadBeforeWrite(t *testing.T) {
+	buf, err := NewBuffer(8)
+
+	out := make([]byte, 8)
+	n, err := buf.Read(out)
+
+	if n != 0 {
+		t.Fatalf("err: Read %i bytes without any being written first", n)
+	}
+
+	if buf.TotalRead() > 0 {
+		t.Fatalf("err: readCount > 0 without any bytes being written first")
+	}
+
+	if err != nil {
+		t.Fatalf("err: Read should never return an error")
+	}
+
+}
+
+func TestReadPastWritePointer(t *testing.T) {
+	buf, _ := NewBuffer(16)
+
+	length, _ := buf.Write([]byte("Hello World"))
+
+	out := make([]byte, 16)
+	n, err := buf.Read(out)
+
+	if n > length {
+		t.Fatal("err: Read past the write cursor")
+	} else if n < length {
+		t.Fatal("err: Didn't read the full length")
+	}
+
+	if err != nil {
+		t.Fatal("err: buf.Read should never return an error")
 	}
 }
 
@@ -132,20 +207,20 @@ func TestBuffer_HugeWrite(t *testing.T) {
 	}
 
 	n, err := buf.Write(inp)
-	if err != nil {
+	if err == nil {
 		t.Fatalf("err: %v", err)
 	}
-	if n != len(inp) {
+	if int64(n) > buf.Size() {
 		t.Fatalf("bad: %v", n)
 	}
 
-	expect := []byte("rld")
+	expect := []byte("hel")
 	if !bytes.Equal(buf.Bytes(), expect) {
 		t.Fatalf("bad: %s", buf.Bytes())
 	}
 }
 
-func TestBuffer_ManySmall(t *testing.T) {
+func TestBuffer_ManySmallWrites(t *testing.T) {
 	inp := []byte("hello world")
 
 	buf, err := NewBuffer(3)
@@ -153,17 +228,29 @@ func TestBuffer_ManySmall(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	for _, b := range inp {
+	for i, b := range inp {
 		n, err := buf.Write([]byte{b})
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if n != 1 {
-			t.Fatalf("bad: %v", n)
+
+		if int64(i) < buf.Size() {
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+
+			if n != 1 {
+				t.Fatalf("bad: %v", n)
+			}
+		} else {
+			if err == nil {
+				t.Fatal("err: Write should've failed")
+			}
+
+			if n != 0 {
+				t.Fatal("bad: Write should've failed")
+			}
 		}
 	}
 
-	expect := []byte("rld")
+	expect := []byte("hel")
 	if !bytes.Equal(buf.Bytes(), expect) {
 		t.Fatalf("bad: %v", buf.Bytes())
 	}
@@ -182,14 +269,17 @@ func TestBuffer_MultiPart(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	for _, b := range inputs {
-		total += len(b)
+	for i, b := range inputs {
 		n, err := buf.Write(b)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if n != len(b) {
-			t.Fatalf("bad: %v", n)
+		total += n
+
+		if i == 0 {
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if n != len(b) {
+				t.Fatalf("bad: %v", n)
+			}
 		}
 	}
 
@@ -197,8 +287,8 @@ func TestBuffer_MultiPart(t *testing.T) {
 		t.Fatalf("bad total")
 	}
 
-	expect := []byte("t\nmy cool input\n")
+	expect := []byte("hello world\nthis")
 	if !bytes.Equal(buf.Bytes(), expect) {
-		t.Fatalf("bad: %v", buf.Bytes())
+		t.Fatalf("bad: expected=\"%s\" got=\"%s\"", expect, buf.Bytes())
 	}
 }
