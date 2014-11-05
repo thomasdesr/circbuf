@@ -12,10 +12,8 @@ func properMod(x, y int64) int64 {
 	return m
 }
 
-// Buffer implements a circular buffer. It is a fixed size,
-// and new writes overwrite older data, such that for a buffer
-// of size N, for any amount of writes, only the last N bytes
-// are retained.
+// Buffer implements a circular buffer. It is a fixed size, but
+// new writes will not overwrite unread data
 type Buffer struct {
 	data []byte
 	size int64
