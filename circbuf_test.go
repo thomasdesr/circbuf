@@ -114,7 +114,7 @@ func TestBuffer_LongWrite(t *testing.T) {
 	if err == nil {
 		t.Fatalf("err: %v", buf)
 	}
-	if int64(n) > buf.Size() {
+	if int64(n) > buf.Capacity() {
 		t.Fatalf("bad: %v", n)
 	}
 
@@ -210,7 +210,7 @@ func TestBuffer_HugeWrite(t *testing.T) {
 	if err == nil {
 		t.Fatalf("err: %v", err)
 	}
-	if int64(n) > buf.Size() {
+	if int64(n) > buf.Capacity() {
 		t.Fatalf("bad: %v", n)
 	}
 
@@ -231,7 +231,7 @@ func TestBuffer_ManySmallWrites(t *testing.T) {
 	for i, b := range inp {
 		n, err := buf.Write([]byte{b})
 
-		if int64(i) < buf.Size() {
+		if int64(i) < buf.Capacity() {
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}

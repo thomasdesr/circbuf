@@ -125,8 +125,8 @@ func (b *Buffer) Write(buf []byte) (int, error) {
 	return int(bytesWritten), nil
 }
 
-// Size returns the size of the buffer
-func (b *Buffer) Size() int64 {
+// Capacity returns the capacity of the buffer
+func (b *Buffer) Capacity() int64 {
 	return b.size - 1
 }
 
