@@ -2,14 +2,14 @@ circbuf
 =======
 
 This repository provides the `circbuf` package. This provides a `Buffer` object
-which is a circular (or ring) buffer. It has a fixed size, but can be written
-to infinitely. Only the last `size` bytes are ever retained. The buffer implements
-the `io.Writer` interface.
+which is a circular (or ring) buffer. It has a fixed size, and returns errors on writes once that size is exhausted without having been read. The buffer implements the `io.Writer` and `io.Reader` interfaces.
+
+It is not safe for use in a shared concurrent situation
 
 Documentation
 =============
 
-Full documentation can be found on [Godoc](http://godoc.org/github.com/armon/circbuf)
+Full documentation can be found on [Godoc](http://godoc.org/github.com/thomaso-mirodin/circbuf)
 
 Usage
 =====
@@ -20,8 +20,8 @@ The `circbuf` package is very easy to use:
 buf, _ := NewBuffer(6)
 buf.Write([]byte("hello world"))
 
-if string(buf.Bytes()) != " world" {
-    panic("should only have last 6 bytes!")
+if string(buf.Bytes()) != "hello " {
+    panic("should only have the first 6 bytes!")
 }
 
 ```
