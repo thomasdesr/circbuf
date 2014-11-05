@@ -1,39 +1,8 @@
-package main
+package circbuf
 
 import (
-	"bufio"
 	"fmt"
 )
-
-func main() {
-	b, _ := NewBuffer(100)
-
-	buf := make([]byte, b.Size())
-	for i := 0; i < len(buf); i++ {
-		buf[i] = byte(i)
-	}
-	count, _ := b.Write(buf)
-
-	fmt.Println("buf", buf, count)
-	fmt.Println("b.Bytes()", b.Bytes())
-	fmt.Println("-----")
-
-	// for i := 0; i < 5; i++ {
-	// 	buf = make([]byte, 7)
-	// 	count, _ := b.Read(buf)
-	// 	// buf, err := b.UnsafeRead(2)
-
-	// 	fmt.Println("Read()", buf, count)
-	// 	fmt.Println("b.Bytes()", b.Bytes())
-	// 	fmt.Println()
-	// 	fmt.Println()
-	// }
-
-	scanner := bufio.NewScanner(b)
-	for scanner.Scan() {
-		fmt.Println(scanner.Bytes())
-	}
-}
 
 func properMod(x, y int64) int64 {
 	m := x % y
@@ -84,8 +53,6 @@ func (b *Buffer) Read(p []byte) (int, error) {
 }
 
 func (b *Buffer) nonCopyRead(n int64) []*byte {
-	// fmt.Printf("Start Read: %#v\n", b)
-
 	buf := make([]*byte, n)
 	bytesRead := int64(0)
 
@@ -97,15 +64,12 @@ func (b *Buffer) nonCopyRead(n int64) []*byte {
 	b.readCount += bytesRead
 	b.readCursor = (b.readCursor + n) % b.size
 
-	// fmt.Printf("End Read: %#v\n", b)
-
 	return buf
 }
 
 // Write writes up to len(buf) bytes to the internal ring,
 // overriding older data if necessary.
 func (b *Buffer) Write(buf []byte) (int, error) {
-	// fmt.Printf("Start Write: %#v\n", b)
 
 	n := int64(len(buf))
 
@@ -118,7 +82,6 @@ func (b *Buffer) Write(buf []byte) (int, error) {
 	b.writeCount += bytesWritten
 	b.writeCursor = ((b.writeCursor + bytesWritten) % b.size)
 
-	// fmt.Printf("End Write: %#v\n", b)
 	if bytesWritten != n {
 		return int(bytesWritten), fmt.Errorf("Unable to write all the bytes")
 	}
