@@ -2,7 +2,9 @@ circbuf
 =======
 
 This repository provides the `circbuf` package. This provides a `Buffer` object
-which is a circular (or ring) buffer. It has a fixed size, and returns errors on writes once that size is exhausted without having been read. The buffer implements the `io.Writer` and `io.Reader` interfaces.
+that implements a non-overwriting circular (or ring) buffer. It has a fixed size. The non-wrapping nature means that reads will block if all the available data has been read and that writes will block when there is no more data in the buffer is unread.
+
+The buffer implements the `io.Writer` and `io.Reader` interfaces.
 
 It is not safe for use in a shared concurrent situation
 
