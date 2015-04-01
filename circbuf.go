@@ -101,7 +101,7 @@ func (b *Buffer) Bytes() []byte {
 		copy(out, b.data[b.readCursor:b.writeCursor])
 		return out
 	default:
-		return make([]byte, b.size)
+		return make([]byte, 0)
 	}
 }
 
