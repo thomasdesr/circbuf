@@ -169,7 +169,7 @@ func TestReadBeforeWrite(t *testing.T) {
 		t.Fatalf("err: Read %i bytes without any being written first", n)
 	}
 
-	if buf.TotalRead() > 0 {
+	if buf.readCount > 0 {
 		t.Fatalf("err: readCount > 0 without any bytes being written first")
 	}
 
@@ -283,7 +283,7 @@ func TestBuffer_MultiPart(t *testing.T) {
 		}
 	}
 
-	if int64(total) != buf.TotalWritten() {
+	if int64(total) != buf.writeCount {
 		t.Fatalf("bad total")
 	}
 

@@ -87,15 +87,6 @@ func (b *Buffer) Capacity() int64 {
 	return b.size - 1
 }
 
-// TotalWritten provides the total number of bytes written
-func (b *Buffer) TotalWritten() int64 {
-	return b.writeCount
-}
-
-func (b *Buffer) TotalRead() int64 {
-	return b.readCount
-}
-
 // Bytes provides a slice of the bytes written. This
 // slice should not be written to.
 func (b *Buffer) Bytes() []byte {
