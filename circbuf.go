@@ -36,29 +36,20 @@ func NewBuffer(size int64) (*Buffer, error) {
 
 func (b *Buffer) Read(p []byte) (int, error) {
 	bytes_read := 0
-	for i, pb := range b.nonCopyRead(int64(len(p))) {
-		if pb != nil {
-			p[i] = *pb
-			bytes_read++
-		}
+
+	switch {
+	case b.readCursor < b.writeCursor:
+		bytes_read += copy(p, b.data[b.readCursor:b.writeCursor])
+	case b.readCursor > b.writeCursor: // We wrapped around the end of the buffer, we need to read around
+		bytes_read += copy(p, b.data[b.readCursor:])               // Read to the end
+		bytes_read += copy(p[bytes_read:], b.data[:b.writeCursor]) // Copy from the beginning to the last read byte
+	default:
+		return 0, nil
 	}
+
+	b.readCursor += int64(bytes_read)
 
 	return bytes_read, nil
-}
-
-func (b *Buffer) nonCopyRead(n int64) []*byte {
-	buf := make([]*byte, n)
-	bytesRead := int64(0)
-
-	for r := b.readCursor; r-b.readCursor < n && b.readCount+(r-b.readCursor) < b.writeCount; r++ {
-		buf[r-b.readCursor] = &b.data[r%b.size]
-		bytesRead++
-	}
-
-	b.readCount += bytesRead
-	b.readCursor = (b.readCursor + n) % b.size
-
-	return buf
 }
 
 // Write writes up to len(buf) bytes to the internal ring,
