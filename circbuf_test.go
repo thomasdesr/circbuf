@@ -334,3 +334,23 @@ func BenchmarkProperModThree(b *testing.B) {
 		_ = ((n % q) + q) % q
 	}
 }
+
+func BenchmarkBuiltinCopy(b *testing.B) {
+	in := make([]byte, 10240)
+	out := make([]byte, 10240)
+
+	for i := 0; i < b.N; i++ {
+		copy(out, in)
+	}
+}
+
+func BenchmarkForLoopCopy(b *testing.B) {
+	in := make([]byte, 10240)
+	out := make([]byte, 10240)
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < len(in); j++ {
+			out[j] = in[j]
+		}
+	}
+}
