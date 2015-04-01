@@ -100,15 +100,17 @@ func (b *Buffer) TotalRead() int64 {
 // slice should not be written to.
 func (b *Buffer) Bytes() []byte {
 	switch {
-	case b.writeCount >= b.size && b.writeCursor == 0:
-		return b.data
-	case b.writeCount > b.size:
+	case b.writeCursor < b.readCursor:
 		out := make([]byte, b.size)
 		copy(out, b.data[b.writeCursor:])
-		copy(out[b.size-b.writeCursor:], b.data[:b.writeCursor])
+		copy(out[b.size-b.writeCursor:], b.data[:b.readCursor])
+		return out
+	case b.writeCursor > b.readCursor:
+		out := make([]byte, b.writeCursor-b.readCursor)
+		copy(out, b.data[b.readCursor:b.writeCursor])
 		return out
 	default:
-		return b.data[:b.writeCursor]
+		return make([]byte, b.size)
 	}
 }
 
