@@ -18,16 +18,14 @@ type Buffer struct {
 	size int64
 
 	writeCursor int64
-	writeCount  int64
 	readCursor  int64
-	readCount   int64
 }
 
 // NewBuffer creates a new buffer of a given size. The size
 // must be greater tha n 0
 func NewBuffer(size int64) (*Buffer, error) {
 	if size <= 0 {
-		return nil, fmt.Errorf("Size must be positive")
+		return nil, fmt.Errorf("circbuf.Buffers must have a size > 0")
 	}
 
 	b := &Buffer{
