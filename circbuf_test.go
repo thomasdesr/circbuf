@@ -285,6 +285,61 @@ func TestBuffer_MultiPart(t *testing.T) {
 	}
 }
 
+func TestBytes(t *testing.T) {
+	buf, err := NewBuffer(10)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	in := []byte{1, 2, 3}
+
+	t.Logf("Writing []byte{%v} into the buffer", in)
+	switch i, err := buf.Write(in); {
+	case err != nil:
+		t.Fatalf("Failed to write bytes into buffer, err{%v}, bytesWritten{%v}", err, i)
+	case i != len(in):
+		t.Fatalf("Failed to write all the bytes into the buffer, bytesWritten{%v} != len{%v}", i, len(in))
+	}
+
+	t.Logf("Bytes: %v", buf.Bytes())
+	if !bytes.Equal(buf.Bytes(), in) {
+		t.Errorf("buf.Bytes(){%v} != in{%v}", buf.Bytes(), in)
+	}
+}
+
+func TestFree(t *testing.T) {
+	buf, err := NewBuffer(10)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	t.Log("Initial stats", buf.Free(), buf.Bytes(), buf)
+
+	t.Log("Bumping writeCursor by 2")
+	buf.writeCursor += 2
+	if buf.Free() != 8 {
+		t.Fatalf("Free() returned '%v', it should've returned 8", buf.Free())
+	}
+	t.Log("Free bytes:", buf.Free())
+
+	t.Log("Writing two bytes: [1, 2]")
+	_, err = buf.Write([]byte{1, 2})
+	if err != nil {
+		t.Errorf("Unable to write out bytes: err{%v}", err)
+	}
+	t.Log("Free Bytes:", buf.Free())
+
+	if !bytes.Equal(buf.Bytes(), []byte{0, 0, 1, 2}) {
+		t.Fatalf("err: buf.Bytes(){%v} != []byte{[0, 0, 1, 2]}")
+	}
+
+	if buf.Free() != 6 {
+		t.Fatal("err: buf.Free(){%v} != 6", buf.Free())
+	}
+
+	t.Log("Final stats", buf.Free(), buf.Bytes(), buf)
+}
+
 func TestProperMod(t *testing.T) {
 	q := 13
 
