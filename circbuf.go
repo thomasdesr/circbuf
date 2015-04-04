@@ -10,6 +10,7 @@ func properMod(x, y int64) int64 {
 }
 
 var ErrBufferFull = errors.New("Unable to write more data, the buffer is full")
+var ErrNoNewData = errors.New("No more data available to read")
 
 // Buffer implements a circular buffer. It is a fixed size, but
 // new writes will not overwrite unread data
@@ -45,7 +46,7 @@ func (b *Buffer) Read(p []byte) (int, error) {
 		bytes_read += copy(p, b.data[b.readCursor:])               // Read to the end
 		bytes_read += copy(p[bytes_read:], b.data[:b.writeCursor]) // Copy from the beginning to the last read byte
 	default:
-		return 0, nil
+		return 0, ErrNoNewData
 	}
 
 	b.readCursor += int64(bytes_read)
