@@ -169,10 +169,6 @@ func TestReadBeforeWrite(t *testing.T) {
 		t.Fatalf("err: Read %i bytes without any being written first", n)
 	}
 
-	if buf.readCount > 0 {
-		t.Fatalf("err: readCount > 0 without any bytes being written first")
-	}
-
 	if err != nil {
 		t.Fatalf("err: Read should never return an error")
 	}
@@ -283,10 +279,6 @@ func TestBuffer_MultiPart(t *testing.T) {
 		}
 	}
 
-	if int64(total) != buf.writeCount {
-		t.Fatalf("bad total")
-	}
-
 	expect := []byte("hello world\nthis")
 	if !bytes.Equal(buf.Bytes(), expect) {
 		t.Fatalf("bad: expected=\"%s\" got=\"%s\"", expect, buf.Bytes())
@@ -322,12 +314,14 @@ func BenchmarkProperModOne(b *testing.B) {
 		_ = n % q
 	}
 }
+
 func BenchmarkProperModTwo(b *testing.B) {
 	q := 13
 	for n := 0; n < b.N; n++ {
 		_ = (n + q) % q
 	}
 }
+
 func BenchmarkProperModThree(b *testing.B) {
 	q := 13
 	for n := 0; n < b.N; n++ {
