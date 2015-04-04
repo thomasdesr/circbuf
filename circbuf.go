@@ -1,12 +1,15 @@
 package circbuf
 
 import (
+	"errors"
 	"fmt"
 )
 
 func properMod(x, y int64) int64 {
 	return ((x % y) + y) % y
 }
+
+var ErrBufferFull = errors.New("Unable to write more data, the buffer is full")
 
 // Buffer implements a circular buffer. It is a fixed size, but
 // new writes will not overwrite unread data
@@ -55,27 +58,63 @@ func (b *Buffer) Read(p []byte) (int, error) {
 // Write writes up to len(buf) bytes to the internal ring,
 // overriding older data if necessary.
 func (b *Buffer) Write(buf []byte) (int, error) {
-
-	n := int64(len(buf))
-
-	bytesWritten := int64(0)
-	for wc := b.writeCursor; bytesWritten < n && wc != properMod((b.readCursor-1), b.size); wc, bytesWritten = (wc+1)%b.size, bytesWritten+1 {
-		b.data[wc%b.size] = buf[bytesWritten]
+	var (
+		bytesWritten int
+		err          error
+	)
+	switch {
+	case b.Free() >= int64(len(buf)):
+		bytesWritten, err = b.writeAround(buf)
+	case b.Free() < int64(len(buf)):
+		bytesWritten, err = b.writeAround(buf[:b.Free()])
 	}
 
-	// Update location of the cursor
-	b.writeCount += bytesWritten
-	b.writeCursor = ((b.writeCursor + bytesWritten) % b.size)
+	if err != nil {
+		return bytesWritten, err
+	}
 
-	if bytesWritten != n {
-		return int(bytesWritten), fmt.Errorf("Unable to write all the bytes")
+	if bytesWritten != len(buf) {
+		return int(bytesWritten), ErrBufferFull
 	}
 	return int(bytesWritten), nil
+}
+
+// DO NOT pass a buffer with more data to this than you want to
+// 		  write, it will write it and destroy data you didn't mean to
+func (b *Buffer) writeAround(buf []byte) (int, error) {
+	bytes_written := 0
+
+	switch {
+	case b.writeCursor < b.readCursor:
+		bytes_written += copy(b.data[b.writeCursor:b.readCursor], buf)
+	// case b.writeCursor > b.readCursor:
+	default:
+		bytes_written += copy(b.data[b.writeCursor:], buf)
+		bytes_written += copy(b.data, buf[bytes_written:])
+	}
+
+	b.writeCursor = (b.writeCursor + int64(bytes_written)) % b.size
+
+	if bytes_written != len(buf) {
+		return bytes_written, fmt.Errorf("Failed to write all the data out")
+	}
+	return bytes_written, nil
 }
 
 // Capacity returns the capacity of the buffer
 func (b *Buffer) Capacity() int64 {
 	return b.size - 1
+}
+
+func (b *Buffer) Free() int64 {
+	switch {
+	case b.readCursor > b.writeCursor:
+		return b.writeCursor - b.readCursor
+	case b.readCursor < b.writeCursor:
+		return (b.Capacity() - b.writeCursor) + (b.readCursor)
+	default:
+		return b.Capacity()
+	}
 }
 
 // Bytes provides a slice of the bytes written. This
